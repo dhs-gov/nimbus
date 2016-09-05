@@ -2,7 +2,14 @@
 Nimbus Command Line Interface
 """
 
+
 import click
+
+from .aws import AWSManager
+
+# TODO DEBUG
+from .logs import set_log_debug_mode
+set_log_debug_mode()
 
 # `cli` is the click command object that callers should access
 
@@ -13,6 +20,8 @@ def cli():
 @cli.command()
 def auth():
     click.echo('Starting auth process')
+    mgr = AWSManager()
+    mgr.connect_to_aws()
 
 @cli.group()
 def ec2():
