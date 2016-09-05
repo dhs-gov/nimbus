@@ -39,7 +39,7 @@ class SSOProvider(object):
         assertion = self._get_assertion_from_html(response.text)
         roles = self._get_roles_in_assertion(assertion)
 
-        log.debug('Received %d roles', len(roles))
+        log.debug('Decoded %d roles in SAMLResponse', len(roles))
 
         if aws_account:
             log.debug('Searching for roles for account %r', aws_account)
@@ -53,6 +53,8 @@ class SSOProvider(object):
 
         if not found:
             raise NotFound('No roles found in SAML response')
+
+        log.debug('Filtered roles: %r', [r.role for r in found])
 
         return {'assertion': assertion, 'roles': found}
 

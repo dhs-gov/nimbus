@@ -100,6 +100,9 @@ class Config(object):
     def default_account_id(self):
         return self.default_account()['account_id']
 
+    def default_role(self):
+        self.data['default_account']['role']
+
     def save(self):
         # TODO: make atomic
         log.debug('Writing config to %r', self.config_file)
