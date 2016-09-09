@@ -172,7 +172,7 @@ def write_creds_to_file(role, creds, region, path=DEFAULT_AWS_CREDENTIALS):
     config.set(section, 'region', region)
     config.set(section, 'aws_access_key_id', creds['AccessKeyId'])
     config.set(section, 'aws_secret_access_key', creds['SecretAccessKey'])
-    config.set(section, 'aws_session_token', creds['SecretAccessKey'])
+    config.set(section, 'aws_session_token', creds['SessionToken'])
     config.set(section, 'expiration',
                time.mktime(creds['Expiration'].timetuple()))
     config.set(section, 'expiration_str', creds['Expiration'])
