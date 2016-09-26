@@ -17,7 +17,8 @@ if os.getenv('NIMBUS_DEBUG'):
 
 # `cli` is the click command object that callers should access
 
-@click.group()
+@click.group(context_settings={'help_option_names': ['--help', '-h']})
+@click.version_option()
 #@click.option('--debug', help='Increase log verbosity', default=False)
 def cli():
     pass

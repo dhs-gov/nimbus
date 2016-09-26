@@ -12,26 +12,7 @@ with open('nimbus/__init__.py', 'r', encoding='utf-8') as f:
     if not version:
         raise RuntimeError('Cannot find version information')
 
-def fread(filename, split=False):
-    """
-    may raise IOError exceptions from file operations
-    """
-    if split:
-        result = []
-    else:
-        result = ''
-
-    with open(filename, 'rb', encoding='utf-8') as f:
-        for line in f:
-            if split:
-                if line.lstrip().startswith('#'):
-                    continue
-                result.append(line.rstrip('\r\n'))
-            else:
-                result += line
-    return result
-
-readme = fread('README.rst')
+readme = open('README.rst', 'r', encoding='utf-8').read()
 
 setup(name='nimbus',
       version=version,
@@ -50,7 +31,15 @@ setup(name='nimbus',
           ],
       },
 
-      install_requires=fread('requirements.txt', split=True),
+      install_requires=[
+          'atomicwrites >= 1.1.5, < 2.0',
+          'beautifulsoup4 >= 4.5.1, < 5.0',
+          'boto3 >= 1.4.0, < 2.0',
+          'click >= 6.6, < 7.0',
+          'pyyaml >= 3.11, < 4.0',
+          'requests >= 2.11.1, < 3.0',
+          'requests-kerberos >= 0.10.0, < 1.0',
+      ],
 
       # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
       classifiers=[
