@@ -38,7 +38,7 @@ setup(name='nimbus',
       description='Infrastructure tools for Amazon Web Services',
       url='http://github.com/uscis/nimbus',
       author='Andy Brody',
-      author_email='andrew.g.brody@uscis.dhs.gov',
+      author_email='git@abrody.com',
       license='Public Domain',
 
       packages=['nimbus'],
