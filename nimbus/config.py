@@ -3,35 +3,40 @@ Configuration functions
 """
 
 import os
+import subprocess
 from collections import namedtuple
 from functools import wraps
 
+import atomicwrites
 import requests
 import yaml
 
 from .errors import NotFound, ManyFound
 from .logs import log
 
-DEFAULT_CONFIG_PATH = os.path.join(os.path.expanduser('~'), '.aws', 'nimbus.yaml')
+DEFAULT_CONFIG_DIR = os.path.join(os.path.expanduser('~'), '.aws', 'nimbus')
 
 class Config(object):
 
-    def __init__(self, config_file=None):
-        if config_file is None:
-            config_file = DEFAULT_CONFIG_PATH
-        self.config_file = config_file
+    def __init__(self, config_dir=None, auto_load=True):
+        if config_dir is None:
+            config_dir = DEFAULT_CONFIG_DIR
+
+        self.config_dir = config_dir
+        self.config_file = os.path.join(config_dir, 'nimbus.yaml')
 
         self.__memoized = {}
 
-        try:
-            self._load_config()
-        except IOError as e:
-            if e.errno == 2:
-                log.warning(
-                    'No config found. Use `nimbus configure` to set up.')
-                raise NotFound("No config found: {!r}".format(e.filename))
-            else:
-                raise
+        if auto_load:
+            try:
+                self._load_config()
+            except IOError as e:
+                if e.errno == 2:
+                    log.warning(
+                        'No config found. Use `nimbus configure` to set up.')
+                    raise NotFound("No config found: {!r}".format(e.filename))
+                else:
+                    raise
 
     def _load_config(self):
         log.debug('Loading config from %r', self.config_file)
@@ -104,30 +109,74 @@ class Config(object):
         self.data['default_account']['role']
 
     def save(self):
-        # TODO: make atomic
         log.debug('Writing config to %r', self.config_file)
-        with open(self.config_file, 'w') as f:
+        with atomicwrites.atomic_write(self.config_file, overwrite=True) as f:
             yaml.safe_dump(self.data, f)
 
     def interactive_create_config(self):
         raise NotImplementedError
 
-    def download_configuration(self, url):
+    # TODO: decide whether to keep this
+    # def download_configuration(self, url):
+    #     """
+    #     Download configuration from a given URL
+    #     """
+    #
+    #     log.info('Downloading configuration from %r', url)
+    #
+    #     resp = requests.get(url)
+    #     resp.raise_for_status()
+    #
+    #     log.debug('Loading')
+    #
+    #     # ensure yaml loadable
+    #     self.data = yaml.safe_load(resp.text)
+    #
+    #     self.save()
+    #
+    #     log.info('Saved configuration to %r', self.config_file)
+
+    def clone_config(self, repo_url):
         """
-        Download configuration from a given URL
+        Clone a configuration repo from given URL using git.
         """
+        log.info('Cloning nimbus configuration from %r', repo_url)
 
-        log.info('Downloading configuration from %r', url)
+        if os.path.exists(self.config_dir):
+            log.error('Config directory %r already exists', self.config_dir)
+            log.error('To update, instead run `nimbus config --upgrade`')
+            raise RuntimeError("Config already exists, cannot overwrite")
 
-        resp = requests.get(url)
-        resp.raise_for_status()
+        basedir = os.path.dirname(self.config_dir)
 
-        log.debug('Loading')
+        return self.run_cmd_in_dir(
+            ['git', 'clone', '--', repo_url, self.config_dir],
+            cwd=basedir, verbose=True)
 
-        # ensure yaml loadable
-        self.data = yaml.safe_load(resp.text)
+    def upgrade_config(self):
+        """
+        Run git pull in the config directory to update configs.
+        """
+        return self.run_cmd_in_dir(['git', 'pull', '--ff-only'],
+                                   verbose=True)
 
-        self.save()
+    def run_cmd_in_dir(self, cmd_array, verbose=False, cwd=None):
+        """
+        Run command in specified directory using subprocess.check_call.
 
-        log.info('Saved configuration to %r', self.config_file)
+        :param cmd_array: Array of command string to execute.
+        :type cmd_array: list<str>
+
+        :param cwd: Directory to run the command in. Defaults to config_dir.
+        :type cwd: str
+        """
+        if cwd is None:
+            cwd = self.config_dir
+
+        msg = 'exec: ' + ' '.join(cmd_array)
+        if verbose:
+            log.info(msg)
+        else:
+            log.debug(msg)
+        return subprocess.check_call(cmd_array, cwd=cwd)
 

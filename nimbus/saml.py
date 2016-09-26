@@ -89,7 +89,7 @@ class SSOProvider(object):
         if resp.status_code != 200:
             log.warning("Received HTTP status code %d when requesting %r",
                         resp.status_code, resp.url)
-            resp.raise_for_status()
+        resp.raise_for_status()
 
         return resp
 
