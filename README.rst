@@ -1,4 +1,4 @@
-Nimbus, tools for interacting with Amazon Web Services
+Nimbus: tools for interacting with Amazon Web Services
 ======================================================
 
 .. image:: https://img.shields.io/pypi/v/nimbus.svg
@@ -52,6 +52,7 @@ Tag the version, here using 0.0.1:
 .. code-block:: bash
 
     git tag v0.0.1
+    git push --tags
 
 Register the package, if you haven't already:
 
