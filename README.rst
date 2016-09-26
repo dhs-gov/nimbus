@@ -23,6 +23,29 @@ TODO
 - http://peterdowns.com/posts/first-time-with-pypi.html
 - https://packaging.python.org/distributing/#upload-your-distributions
 
+Credentials
+~~~~~~~~~~~
+
+You'll want a ``~/.pypirc`` with your PyPI test and live credentials:
+
+.. code-block:: dosini
+
+    [distutils]
+    index-servers=
+    pypi
+    pypitest
+
+    [pypitest]
+    repository = https://testpypi.python.org/pypi
+    username = someuser
+    password = sometestpassword
+
+    [pypi]
+    repository = https://pypi.python.org/pypi
+    username = someuser
+    password = somepassword
+
+
 Publish to testpypi
 ~~~~~~~~~~~~~~~~~~~
 
@@ -41,7 +64,7 @@ Build and upload (``sdist``, then ``upload``) in one go:
 
 .. code-block:: bash
 
-    python setup.py sdist upload -r https://testpypi.python.org/pypi
+    python setup.py sdist upload --sign -r https://testpypi.python.org/pypi
 
 
 Publish to PyPI
@@ -58,13 +81,13 @@ Register the package, if you haven't already:
 
 .. code-block:: bash
 
-    python setup.py register
+    python setup.py register -r pypi
 
 Build and upload:
 
 .. code-block:: bash
 
-    python setup.py sdist upload
+    python setup.py sdist upload -s -r pypi --sign
 
 
 License
