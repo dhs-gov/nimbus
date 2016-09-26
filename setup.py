@@ -31,12 +31,13 @@ def fread(filename, split=False):
                 result += line
     return result
 
-LONG_DESC = fread('README.md')
+readme = fread('README.rst')
 
 setup(name='nimbus',
       version=version,
       description='Infrastructure tools for Amazon Web Services',
-      url='http://github.com/uscis/nimbus',
+      long_description=readme,
+      url='https://github.com/uscis/nimbus',
       author='Andy Brody',
       author_email='git@abrody.com',
       license='Public Domain',
