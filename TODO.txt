@@ -1,0 +1,13 @@
+references
+    https://github.com/neuroticnerd/boxbox/tree/master/boxbox
+    https://github.com/neuroticnerd/boxbox/blob/master/setup.py
+    https://github.com/neuroticnerd/boxbox/blob/master/boxbox/interface.py
+
+- fix up --debug / debug env modes
+
+- add note about comments being removed / switch to comment preserving configparser
+
+- make default_account optional
+- add support for multi-account prompt to cli.py, aws.py, saml.py
+
+- add local config hash merging stuff
