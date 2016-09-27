@@ -20,9 +20,17 @@ class SSOProvider(object):
     @classmethod
     def new_from_config(klass, config):
         info = config.data['sso']
-        return klass(auth_method=info['auth_method'],
-                     idp_start_url=info['url'],
-                     idp_ssl_verify=os.path.expanduser(info['ca_file']))
+
+        auth_method = info['auth_method']
+        start_url = info['url']
+        ca_file = info['ca_file']
+
+        # Treat $CONFIG_ROOT as relative to config dir
+        if ca_file.startswith('$CONFIG_ROOT'):
+            ca_file = ca_file.replace('$CONFIG_ROOT', config.config_dir)
+
+        return klass(auth_method=auth_method, idp_start_url=start_url,
+                     idp_ssl_verify=ca_file)
 
     def __init__(self, auth_method, idp_start_url, idp_ssl_verify):
         self.auth_method = auth_method
