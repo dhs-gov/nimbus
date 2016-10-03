@@ -13,6 +13,7 @@ import yaml
 
 from .errors import NotFound, ManyFound
 from .logs import log
+from .utils import mkdir_p
 
 # TODO: is this correct for Windows?
 DEFAULT_CONFIG_DIR = os.path.join(os.path.expanduser('~'), '.aws', 'nimbus')
@@ -147,6 +148,9 @@ class Config(object):
             log.error('Config directory %r already exists', self.config_dir)
             log.error('To update, instead run `nimbus config --upgrade`')
             raise RuntimeError("Config already exists, cannot overwrite")
+
+        # create parent directory and clone directory if nonexistent
+        mkdir_p(self.config_dir)
 
         basedir = os.path.dirname(self.config_dir)
 

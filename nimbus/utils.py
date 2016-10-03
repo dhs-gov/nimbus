@@ -2,6 +2,8 @@
 Miscellaneous utilities
 """
 
+import errno
+import os
 import sys
 
 def prompt_choices(choices, prompt='Please choose an option:',
@@ -22,4 +24,13 @@ def prompt_choices(choices, prompt='Please choose an option:',
                 return choices[index]
         except (ValueError, IndexError):
             pass
+
+def mkdir_p(path):
+    try:
+        os.makedirs(path)
+    except OSError as exc:
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else:
+            raise
 
