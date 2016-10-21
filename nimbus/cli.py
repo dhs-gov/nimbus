@@ -7,6 +7,7 @@ import subprocess
 import sys
 
 import click
+import yaml
 
 from .aws import AWSManager
 from .config import Config
@@ -39,32 +40,40 @@ def auth(region, account, role, interactive):
     if interactive is None:
         interactive = sys.stdin.isatty() and sys.stderr.isatty()
 
-    mgr = AWSManager(region=region, account=account)
-    mgr.connect_to_aws(interactive=interactive, role_name=role)
+    mgr = AWSManager(region=region, account=account, load_cached=False,
+                     interactive=interactive)
+    mgr.auth_to_aws_via_sso(role_name=role)
 
 @cli.command()
 @click.option('-u', '--upgrade', help='Git pull to upgrade existing config',
               is_flag=True)
+@click.option('-d', '--dump', help='Dump current config values',
+              is_flag=True)
 @click.argument('config_repo', required=False)
-def configure(upgrade, config_repo=None):
+def configure(upgrade, dump, config_repo=None):
     """
     Set up configuration for nimbus.
 
     If CONFIG_REPO is given, clone it and use it as the basis for nimbus
-    configuration. Otherwise interactively prompt for necessary values.
+    configuration.
 
-    (TODO: actually implement interactive prompts)
+    (TODO: Implement interactive prompts for config in addition to git clone.)
     """
 
-
-    if upgrade and config_repo:
-        raise click.UsageError('Cannot pass both --upgrade and CONFIG_REPO')
+    if len(filter(None, [upgrade, config_repo, dump])) > 1:
+        raise click.UsageError(
+            'Can only pass one of --upgrade, CONFIG_REPO, or --dump')
 
     config = Config(auto_load=False)
 
     if upgrade:
         click.secho('Upgrading config repo...', fg='blue', bold=True)
         config.upgrade_config()
+    elif dump:
+        click.secho('Printing config from {0}:'.format(config.config_dir),
+                    fg='blue', bold=True)
+        config.load_config()
+        yaml.dump(config.data, sys.stdout)
     else:
         if not config_repo:
             raise click.UsageError('Must pass CONFIG_REPO or --upgrade')
@@ -85,4 +94,9 @@ def ec2():
 
 @ec2.command(name='ls')
 def ec2_ls():
-    click.echo('Listing instances')
+    click.secho('Listing instances', fg='blue', bold=True)
+
+    mgr = AWSManager()
+    ec2 = mgr.ec2_client()
+
+    click.echo(repr(ec2.describe_instances().iteritems()))
