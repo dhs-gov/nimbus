@@ -2,7 +2,6 @@
 AWS stuff
 """
 
-import ConfigParser
 import os
 import time
 
@@ -11,6 +10,7 @@ from datetime import datetime
 import atomicwrites
 import boto3
 import click
+import configobj
 
 from .logs import log
 from .config import Config
@@ -21,8 +21,6 @@ from .utils import prompt_choices
 # Default AWS credentials file. This is probably not correct on Windows.
 DEFAULT_AWS_CREDENTIALS = os.path.join(os.path.expanduser('~'), '.aws',
                                        'credentials')
-
-# TODO: switch to configparser library that preserves comments / ordering
 
 class AWSManager(object):
     def __init__(self, region=None, account=None, load_cached=True,
@@ -204,7 +202,7 @@ class AWSManager(object):
         log.debug('find_cached_creds: %r, %r', account, role)
         conf = read_aws_credentials()
 
-        nimbus_sections = [s for s in conf.sections() if
+        nimbus_sections = [s for s in conf.sections if
                            s.startswith('nimbus_')]
 
         found = {}
@@ -213,7 +211,7 @@ class AWSManager(object):
             if not allow_expired:
 
                 exp = datetime.utcfromtimestamp(
-                    conf.getfloat(section, 'expiration'))
+                    conf[section].as_float('expiration'))
 
                 if exp < datetime.utcnow():
                     continue
@@ -229,7 +227,7 @@ class AWSManager(object):
                     continue
 
             log.debug('Found valid credentials in section %r', section)
-            found[(s_account, s_role)] = dict(conf.items(section))
+            found[(s_account, s_role)] = dict(conf[section])
 
         if not found:
             return False
@@ -287,25 +285,24 @@ def write_creds_to_file(role, creds, region, path=DEFAULT_AWS_CREDENTIALS):
 
     section = '_'.join(['nimbus', role.account, role.role])
 
-    if not config.has_section(section):
-        config.add_section(section)
+    if not section in config:
+        config[section] = {}
 
-    config.set(section, 'region', region)
-    config.set(section, 'aws_access_key_id', creds['AccessKeyId'])
-    config.set(section, 'aws_secret_access_key', creds['SecretAccessKey'])
-    config.set(section, 'aws_session_token', creds['SessionToken'])
-    config.set(section, 'expiration',
-               time.mktime(creds['Expiration'].timetuple()))
-    config.set(section, 'expiration_str', creds['Expiration'])
+    config[section]['region'] = region
+    config[section]['aws_access_key_id'] = creds['AccessKeyId']
+    config[section]['aws_secret_access_key'] = creds['SecretAccessKey']
+    config[section]['aws_session_token'] = creds['SessionToken']
+    config[section]['expiration'] = \
+        time.mktime(creds['Expiration'].timetuple())
+    config[section]['expiration_str'] = creds['Expiration']
 
     with atomicwrites.atomic_write(path, overwrite=True) as f:
-        config.write(f)
+        config.write(outfile=f)
 
     log.debug('Saved credential section %r', section)
 
 def read_aws_credentials(path=DEFAULT_AWS_CREDENTIALS):
-    config = ConfigParser.RawConfigParser()
-    config.read(path)
+    config = configobj.ConfigObj(path)
 
     return config
 
