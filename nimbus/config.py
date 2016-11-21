@@ -42,6 +42,9 @@ class Config(object):
                     raise
 
     def load_config(self):
+        main_data = None
+        local_data = None
+
         log.debug('Loading config from %r', self.config_file)
         with open(self.config_file, 'r') as f:
             main_data = yaml.safe_load(f)
@@ -51,6 +54,7 @@ class Config(object):
             with open(self.local_config_file, 'r') as f:
                 local_data = yaml.safe_load(f)
         else:
+            local_data = {}
             log.debug('No local config at %r', self.local_config_file)
 
         self.data = merged_dicts(main_data, local_data)
