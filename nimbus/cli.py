@@ -2,6 +2,8 @@
 Nimbus Command Line Interface
 """
 
+from __future__ import print_function
+
 import os
 import subprocess
 import sys
@@ -43,42 +45,65 @@ def auth(region, account, role, interactive):
                      interactive=interactive)
     mgr.auth_to_aws_via_sso(role_name=role)
 
-@cli.command()
-@click.option('-u', '--upgrade', help='Git pull to upgrade existing config',
-              is_flag=True)
-@click.option('-d', '--dump', help='Dump current config values',
-              is_flag=True)
-@click.argument('config_repo', required=False)
-def configure(upgrade, dump, config_repo=None):
+@cli.group(name='config')
+def config_group():
+    """Subcommand for managing nimbus configuration"""
+
+@config_group.command(name='clone')
+@click.argument('config_repo')
+def config_clone(config_repo):
     """
     Set up configuration for nimbus.
 
-    If CONFIG_REPO is given, clone it and use it as the basis for nimbus
-    configuration.
-
-    (TODO: Implement interactive prompts for config in addition to git clone.)
+    Clone CONFIG_REPO and use it as the basis for nimbus configuration.
     """
-
-    if len(filter(None, [upgrade, config_repo, dump])) > 1:
-        raise click.UsageError(
-            'Can only pass one of --upgrade, CONFIG_REPO, or --dump')
-
+    click.secho('Cloning config repo...', fg='blue', bold=True)
     config = Config(auto_load=False)
+    config.clone_config(config_repo)
+    click.secho('Done', fg='blue', bold=True)
 
-    if upgrade:
-        click.secho('Upgrading config repo...', fg='blue', bold=True)
-        config.upgrade_config()
-    elif dump:
-        click.secho('Printing config from {0}:'.format(config.config_dir),
-                    fg='blue', bold=True)
-        config.load_config()
-        yaml.dump(config.data, sys.stdout)
+@config_group.command(name='dump')
+def config_dump():
+    """Dump nimbus config as yaml."""
+    config = Config(auto_load=False)
+    click.secho('Printing config from {0}:'.format(config.config_dir),
+                fg='blue', bold=True, err=True)
+    config.load_config()
+    print('---')
+    yaml.dump(config.data, sys.stdout, default_flow_style=False)
+
+@config_group.command(name='ls-accounts')
+@click.option('-d', '--dump', help='Display verbose info', default=False,
+              is_flag=True)
+def ls_accounts(dump):
+    """List known AWS accounts from nimbus.yaml"""
+    click.secho('Listing available AWS accounts', err=True, fg='green',
+                bold=True)
+
+    mgr = AWSManager()
+    config = mgr.config
+
+    click.secho('Loaded config from {}\n'.format(config.config_file), err=True)
+
+    if dump:
+        print('---')
+        print(config.aws_accounts_pretty(), end='')
     else:
-        if not config_repo:
-            raise click.UsageError('Must pass CONFIG_REPO or --upgrade')
-        click.secho('Cloning config repo...', fg='blue', bold=True)
-        config.clone_config(config_repo)
+        accounts = config.aws_accounts()
+        click.echo('\t'.join(['name', 'description', 'account_id']))
+        for ac in accounts:
+            click.echo('\t'.join([
+                click.style(ac['name'], fg='blue', bold=True),
+                ac['description'],
+                ac['account_id'],
+            ]))
 
+@config_group.command(name='upgrade')
+def config_upgrade():
+    """Run git pull to update config."""
+    config = Config(auto_load=False)
+    click.secho('Upgrading config repo...', fg='blue', bold=True)
+    config.upgrade_config()
     click.secho('Done', fg='blue', bold=True)
 
 @cli.command()

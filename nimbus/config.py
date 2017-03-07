@@ -81,6 +81,12 @@ class Config(object):
     def _aws_accounts_filter(self, func):
         return [x for x in self.aws_accounts() if func(x)]
 
+    def aws_accounts_pretty(self):
+        """
+        Return a pretty string rendering of the list of AWS accounts.
+        """
+        return yaml.dump(self.aws_accounts(), default_flow_style=False)
+
     def get_aws_account(self, name=None, account_id=None):
         if name and account_id:
             raise ValueError('Must pass name or account_id, not both')
@@ -160,7 +166,7 @@ class Config(object):
 
         if os.path.exists(self.config_dir):
             log.error('Config directory %r already exists', self.config_dir)
-            log.error('To update, instead run `nimbus config --upgrade`')
+            log.error('To update, instead run `nimbus config upgrade`')
             raise RuntimeError("Config already exists, cannot overwrite")
 
         basedir = os.path.dirname(self.config_dir)
