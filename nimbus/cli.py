@@ -26,11 +26,10 @@ def cli():
 
 @cli.command()
 @click.option('--region', help='AWS region')
-@click.option('--account', help='AWS account nickname / ID')
 @click.option('--role', help='IAM role to assume')
 @click.option('--interactive/--batch', help='Prompt to choose role', default=None,
               is_flag=True)
-@click.argument('account', default='foo')
+@click.argument('account', default=None, required=False)
 def auth(region, account, role, interactive):
     """Authenticate to AWS via SSO provider + SAML."""
     # TODO: allow configuring region, account, role
