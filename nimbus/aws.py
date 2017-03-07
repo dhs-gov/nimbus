@@ -2,6 +2,8 @@
 AWS stuff
 """
 
+from __future__ import print_function
+
 import os
 import time
 
@@ -308,11 +310,11 @@ def read_aws_credentials(path=DEFAULT_AWS_CREDENTIALS):
 
 def print_env_credentials(creds, region=None):
     if region:
-        print 'export AWS_DEFAULT_REGION=' + region
+        print('export AWS_DEFAULT_REGION=' + region)
     for item, env in [('AccessKeyId', 'AWS_ACCESS_KEY_ID'),
                       ('SecretAccessKey', 'AWS_SECRET_ACCESS_KEY'),
                       ('SessionToken', 'AWS_SESSION_TOKEN')]:
-        print 'export {}={}'.format(env, creds[item])
+        print('export {}={}'.format(env, creds[item]))
 
 
 def assume_role_with_saml(region, role_arn, provider_arn, assertion):
