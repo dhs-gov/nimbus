@@ -13,7 +13,7 @@ import yaml
 
 from .errors import NotFound, ManyFound
 from .logs import log
-from .utils import mkdir_p
+from .utils import merged_dicts, mkdir_p
 
 # TODO: is this correct for Windows?
 DEFAULT_CONFIG_DIR = os.path.join(os.path.expanduser('~'), '.aws', 'nimbus')
@@ -25,13 +25,14 @@ class Config(object):
             config_dir = DEFAULT_CONFIG_DIR
 
         self.config_dir = config_dir
-        self.config_file = os.path.join(config_dir, 'nimbus.yaml')
+        self.config_file = os.path.join(config_dir, 'config.yaml')
+        self.local_config_file = os.path.join(config_dir, 'local.yaml')
 
         self.__memoized = {}
 
         if auto_load:
             try:
-                self._load_config()
+                self.load_config()
             except IOError as e:
                 if e.errno == 2:
                     log.warning(
@@ -40,10 +41,23 @@ class Config(object):
                 else:
                     raise
 
-    def _load_config(self):
+    def load_config(self):
+        main_data = None
+        local_data = None
+
         log.debug('Loading config from %r', self.config_file)
         with open(self.config_file, 'r') as f:
-            self.data = yaml.safe_load(f)
+            main_data = yaml.safe_load(f)
+
+        if os.path.exists(self.local_config_file):
+            log.debug('Loading local config from %r', self.local_config_file)
+            with open(self.local_config_file, 'r') as f:
+                local_data = yaml.safe_load(f)
+        else:
+            local_data = {}
+            log.debug('No local config at %r', self.local_config_file)
+
+        self.data = merged_dicts(main_data, local_data)
 
     def validate(self):
         # ensure default stuff like region, sso, accounts exist
@@ -66,6 +80,12 @@ class Config(object):
 
     def _aws_accounts_filter(self, func):
         return [x for x in self.aws_accounts() if func(x)]
+
+    def aws_accounts_pretty(self):
+        """
+        Return a pretty string rendering of the list of AWS accounts.
+        """
+        return yaml.dump(self.aws_accounts(), default_flow_style=False)
 
     def get_aws_account(self, name=None, account_id=None):
         if name and account_id:
@@ -146,7 +166,7 @@ class Config(object):
 
         if os.path.exists(self.config_dir):
             log.error('Config directory %r already exists', self.config_dir)
-            log.error('To update, instead run `nimbus config --upgrade`')
+            log.error('To update, instead run `nimbus config upgrade`')
             raise RuntimeError("Config already exists, cannot overwrite")
 
         # create parent directory and clone directory if nonexistent
