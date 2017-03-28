@@ -13,6 +13,7 @@ import click
 import yaml
 
 from .aws import AWSManager
+from .awslib import ec2lib
 from .config import Config
 from .logs import set_log_debug_mode
 from .utils import is_interactive_default
@@ -122,9 +123,23 @@ def config_upgrade():
 
 @cli.command()
 @click.argument('host')
-def ssh():
-    """SSH to an EC2 instance"""
-    raise NotImplementedError
+def ssh(host):
+    """
+    SSH to an EC2 instance.
+
+    HOST may be:
+        - EC2 instance ID: i-12abcdef
+        - IP address: 10.0.0.0
+        - Instance Name tag: my-host.example.com
+
+    Examples:
+        nimbus ssh ubuntu@i-12abcdef
+    """
+
+    mgr = AWSManager()
+    ec2lib = ec2lib.EC2Lib()
+
+    ec2lib.parse_ssh_host_arg(host)
 
 @cli.group()
 def ec2():
