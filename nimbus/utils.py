@@ -68,3 +68,16 @@ def mkdir_p(path):
         else:
             raise
 
+def is_interactive_default():
+    """
+    Return whether to assume interactivity by default.
+
+    If the environment varible NIMBUS_BATCH is set and truthy, return False.
+
+    Else, if STDIN and STDOUT are both connected to TTYs, return True.
+
+    Otherwise, return False.
+    """
+    if os.environ.get('NIMBUS_BATCH'):
+        return False
+    return sys.stdin.isatty() and sys.stderr.isatty()

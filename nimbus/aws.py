@@ -132,11 +132,29 @@ class AWSManager(object):
     def ec2_client(self):
         return self.aws_client('ec2')
 
-    def auth_to_aws_via_sso(self, role_name=None, print_env=True,
-                            save_creds=True):
+    def _find_role_by_name(self, roles, role_name):
+        log.debug("Looking for role named %r among %r", role_name, roles)
+        for r in roles:
+            if r.role == role_name:
+                return r
+        raise NotFound("Role name not found: " + repr(role_name))
+
+    def _choose_role_interactive(self, roles):
+        log.debug("Interactively prompting for role")
+        arn = prompt_choices(choices=[r.role_arn for r in roles],
+                             prompt='Please choose a role:')
+        return [r for r in roles if r.role_arn == arn][0]
+
+    def auth_to_aws_via_sso(self, role_name=None, print_env=False,
+                            print_profile=True, save_creds=True):
         """
         Connect to the SSO provider specified by config, get a SAML assertion.
         Use that SAML assertion to assume the specified role in AWS.
+
+        :return: A tuple of the role (nimbus.sso.RoleInfo) and a dict of the
+                 STS credentials.
+        :rtype: 2-tuple of (nimbus.sso.RoleInfo, dict) containing role info,
+                dict of credentials
         """
         log.debug('connect_to_aws()')
 
@@ -162,15 +180,20 @@ class AWSManager(object):
 
         assert roles
 
-        if len(roles) <= 1:
-            role = roles[0]
+        # if role name was given, choose that one
+        if role_name:
+            role = self._find_role_by_name(roles=roles, role_name=role_name)
         else:
-            if self.interactive:
-                arn = prompt_choices(choices=[r.role_arn for r in roles],
-                                     prompt='Please choose a role:')
-                role = [r for r in roles if r.role_arn == arn][0]
+            if len(roles) <= 1:
+                # with only one role, just use it
+                role = roles[0]
             else:
-                raise ManyFound("Multiple roles found: " + repr(roles))
+                if self.interactive:
+                    role = self._choose_role_interactive(roles)
+                else:
+                    raise ManyFound("Multiple roles found: " + repr(roles))
+
+        profile_name = profile_name_for_role(role=role)
 
         log.info('Assuming role with SAML: %s', role.role_arn)
 
@@ -195,10 +218,13 @@ class AWSManager(object):
         if print_env:
             print_env_credentials(creds)
 
+        if print_profile:
+            print_env_profile(role)
+
         if save_creds:
             write_creds_to_file(role=role, creds=creds, region=self.region)
 
-        return creds
+        return profile_name, creds
 
     def load_cached_creds(self, account=None, role=None, allow_expired=False):
         log.debug('find_cached_creds: %r, %r', account, role)
@@ -263,6 +289,21 @@ class AWSManager(object):
             'creds': found[chosen],
         }
 
+def profile_name_for_role(role):
+    """
+    Return the name of the AWS profile used to save/use given credentials.
+
+    :param role: A namedtuple containing info about an assumed role
+    :type role: nimbus.sso.RoleInfo
+
+    :return: AWS profile name
+    :rtype: string
+    """
+    return profile_name(account=role.account, role_name=role.role)
+
+def profile_name(account, role_name):
+    return '_'.join(['nimbus', account, role_name])
+
 def write_creds_to_file(role, creds, region, path=DEFAULT_AWS_CREDENTIALS):
     """
     Save credentials for the given role to the AWS credentials file, creating a
@@ -285,7 +326,7 @@ def write_creds_to_file(role, creds, region, path=DEFAULT_AWS_CREDENTIALS):
 
     config = read_aws_credentials(path=path)
 
-    section = '_'.join(['nimbus', role.account, role.role])
+    section = profile_name_for_role(role)
 
     if not section in config:
         config[section] = {}
@@ -316,6 +357,12 @@ def print_env_credentials(creds, region=None):
                       ('SessionToken', 'AWS_SESSION_TOKEN')]:
         print('export {}={}'.format(env, creds[item]))
 
+def print_env_profile(role, region=None):
+    if region:
+        print('export AWS_DEFAULT_REGION=' + region)
+
+    section = profile_name_for_role(role=role)
+    print('export AWS_PROFILE=' + section)
 
 def assume_role_with_saml(region, role_arn, provider_arn, assertion):
     log.debug('assume_role_with_saml(%r, %r, %r, ...)', region, role_arn,
