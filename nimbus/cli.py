@@ -7,6 +7,7 @@ from __future__ import print_function
 import os
 import subprocess
 import sys
+import time
 
 import click
 import yaml
@@ -31,23 +32,30 @@ def cli():
 @click.option('--region', help='AWS region')
 @click.option('--interactive/--batch', help='Prompt to choose role', default=None,
               is_flag=True)
+@click.option('-l', '--loop', help='Loop forever, refreshing credentials hourly',
+              default=None, is_flag=True)
 @click.argument('account', default=None, required=False)
 @click.argument('role', default=None, required=False)
-def auth(region, account, role, interactive):
+def auth(region, account, role, interactive, loop):
     """Authenticate to AWS via SSO provider + SAML."""
-    # TODO: allow configuring region, account, role
-    # allow prompting for values not provided in defaults
-    click.secho('Starting auth process', err=True, fg='blue', bold=True)
+    while True:
+        click.secho('Starting auth process', err=True, fg='blue', bold=True)
 
-    if interactive is None:
-        interactive = is_interactive_default()
+        if interactive is None:
+            interactive = is_interactive_default()
 
-    mgr = AWSManager(region=region, account=account, load_cached=False,
-                     interactive=interactive)
+        mgr = AWSManager(region=region, account=account, load_cached=False,
+                         interactive=interactive)
 
-    # Auth via SSO to get STS credentials and print the AWS_PROFILE environment
-    # variable of the resulting saved credentials.
-    mgr.auth_to_aws_via_sso(role_name=role, print_profile=True)
+        # Auth via SSO to get STS credentials and print the AWS_PROFILE environment
+        # variable of the resulting saved credentials.
+        mgr.auth_to_aws_via_sso(role_name=role, print_profile=True)
+
+        if loop:
+            click.secho('Done. Sleeping for 55 minutes.', fg='blue', bold=True)
+            time.sleep(55 * 60)
+        else:
+            break
 
     click.secho('Done', err=True, fg='blue', bold=True)
 
