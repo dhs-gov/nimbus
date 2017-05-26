@@ -137,6 +137,7 @@ class AWSManager(object):
         for r in roles:
             if r.role == role_name:
                 return r
+        log.error("Could not find %r among %r", role_name, roles)
         raise NotFound("Role name not found: " + repr(role_name))
 
     def _choose_role_interactive(self, roles):
