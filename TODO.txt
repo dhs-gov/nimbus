@@ -11,3 +11,5 @@ references
 - add support for multi-account prompt to cli.py, aws.py, saml.py
 
 - add local config hash merging stuff
+
+- migrate from requirements.txt to pipenv
